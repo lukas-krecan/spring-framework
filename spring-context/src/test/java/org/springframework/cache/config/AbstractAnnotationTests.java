@@ -82,6 +82,17 @@ public abstract class AbstractAnnotationTests {
 		assertSame(r1, r3);
 	}
 
+	public void testCacheableFuture(CacheableService<?> service) throws Exception {
+		Object o1 = new Object();
+
+		Object r1 = service.cacheFuture(o1).get();
+		Object r2 = service.cacheFuture(o1).get();
+		Object r3 = service.cacheFuture(o1).get();
+
+		assertSame(r1, r2);
+		assertSame(r1, r3);
+	}
+
 	public void testEvict(CacheableService<?> service) throws Exception {
 		Object o1 = new Object();
 
@@ -451,6 +462,11 @@ public abstract class AbstractAnnotationTests {
 	}
 
 	@Test
+	public void testCacheableFuture() throws Exception {
+		testCacheableFuture(cs);
+	}
+
+	@Test
 	public void testInvalidate() throws Exception {
 		testEvict(cs);
 	}
@@ -508,6 +524,11 @@ public abstract class AbstractAnnotationTests {
 	@Test
 	public void testClassCacheCacheable() throws Exception {
 		testCacheable(ccs);
+	}
+
+	@Test
+	public void testClassCacheCacheableFuture() throws Exception {
+		testCacheableFuture(ccs);
 	}
 
 	@Test

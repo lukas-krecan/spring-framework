@@ -22,6 +22,9 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
+import org.springframework.scheduling.annotation.AsyncResult;
+
+import java.util.concurrent.Future;
 
 /**
  * Simple cacheable service
@@ -38,6 +41,11 @@ public class DefaultCacheableService implements CacheableService<Long> {
 	@Cacheable("testCache")
 	public Long cache(Object arg1) {
 		return counter.getAndIncrement();
+	}
+
+	@Override
+	public Future<Long> cacheFuture(Object arg1) {
+		return new AsyncResult<>(counter.getAndIncrement());
 	}
 
 	@Override

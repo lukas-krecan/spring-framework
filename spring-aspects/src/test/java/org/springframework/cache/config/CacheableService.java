@@ -16,6 +16,8 @@
 
 package org.springframework.cache.config;
 
+import java.util.concurrent.Future;
+
 /**
  * Basic service interface.
  *
@@ -25,6 +27,8 @@ package org.springframework.cache.config;
 public interface CacheableService<T> {
 
 	T cache(Object arg1);
+
+	Future<T> cacheFuture(Object arg1);
 
 	void invalidate(Object arg1);
 

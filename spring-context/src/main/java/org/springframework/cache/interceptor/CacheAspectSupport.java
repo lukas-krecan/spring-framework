@@ -16,6 +16,7 @@
 
 package org.springframework.cache.interceptor;
 
+import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -41,6 +42,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.expression.AnnotatedElementKey;
 import org.springframework.expression.EvaluationContext;
+import org.springframework.scheduling.annotation.AsyncResult;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.CollectionUtils;
@@ -48,6 +50,8 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
+import org.springframework.util.concurrent.ListenableFuture;
+import org.springframework.util.concurrent.ListenableFutureCallback;
 
 /**
  * Base class for caching aspects, such as the {@link CacheInterceptor}
@@ -335,6 +339,10 @@ public abstract class CacheAspectSupport extends AbstractCacheInvoker
 		// Check if we have a cached item matching the conditions
 		Cache.ValueWrapper cacheHit = findCachedItem(contexts.get(CacheableOperation.class));
 
+		if (cacheHit != null && cacheHit.get() instanceof ListenableFutureCacheValueWrapper) {
+			cacheHit = new SimpleValueWrapper(new AsyncResult<>(((ListenableFutureCacheValueWrapper) cacheHit.get()).getValue()));
+		}
+
 		// Collect puts from any @Cacheable miss, if no cached item is found
 		List<CachePutRequest> cachePutRequests = new LinkedList<CachePutRequest>();
 		if (cacheHit == null) {
@@ -353,6 +361,24 @@ public abstract class CacheAspectSupport extends AbstractCacheInvoker
 			result = new SimpleValueWrapper(invokeOperation(invoker));
 		}
 
+		if (result.get() instanceof ListenableFuture) {
+			((ListenableFuture) result.get()).addCallback(new ListenableFutureCallback() {
+				@Override
+				public void onSuccess(Object result) {
+					postProcessCache(contexts, cachePutRequests, new SimpleValueWrapper(new ListenableFutureCacheValueWrapper(result)));
+				}
+				@Override
+				public void onFailure(Throwable ex) {
+
+				}
+			});
+		} else {
+			postProcessCache(contexts, cachePutRequests, result);
+		}
+		return result.get();
+	}
+
+	private void postProcessCache(CacheOperationContexts contexts, List<CachePutRequest> cachePutRequests, Cache.ValueWrapper result) {
 		// Collect any explicit @CachePuts
 		collectPutRequests(contexts.get(CachePutOperation.class), result.get(), cachePutRequests);
 
@@ -363,8 +389,6 @@ public abstract class CacheAspectSupport extends AbstractCacheInvoker
 
 		// Process any late evictions
 		processCacheEvicts(contexts.get(CacheEvictOperation.class), false, result.get());
-
-		return result.get();
 	}
 
 	private boolean hasCachePut(CacheOperationContexts contexts) {
@@ -708,6 +732,22 @@ public abstract class CacheAspectSupport extends AbstractCacheInvoker
 		@Override
 		public int hashCode() {
 			return (this.cacheOperation.hashCode() * 31 + this.methodCacheKey.hashCode());
+		}
+	}
+
+
+	/**
+	 * We have to see if the value retrieved from cache should be converted to ListenableFuture.
+	 */
+	private static final class ListenableFutureCacheValueWrapper implements Serializable {
+		private final Object value;
+
+		private ListenableFutureCacheValueWrapper(Object value) {
+			this.value = value;
+		}
+
+		public Object getValue() {
+			return value;
 		}
 	}
 }

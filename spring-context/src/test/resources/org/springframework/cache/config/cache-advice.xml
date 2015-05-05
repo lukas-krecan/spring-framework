@@ -10,6 +10,7 @@
 	<cache:advice id="cacheAdviceInterface" cache-manager="cacheManager">
 		<cache:caching cache="testCache">
 			<cache:cacheable method="cache"/>
+			<cache:cacheable method="cacheFuture"/>
 			<cache:cacheable method="conditional" condition="#classField == 3"/>
 			<cache:cacheable method="unless" unless="#result > 10"/>
 			<cache:cacheable method="key" key="#p0"/>
@@ -61,6 +62,7 @@
 			<cache:cacheable method="nam*" key="#root.methodName + #root.caches[0].name"/>
 			<cache:cacheable method="rootVars" key="#root.methodName + #root.method.name + #root.targetClass + #root.target"/>
 			<cache:cacheable method="cache"/>
+			<cache:cacheable method="cacheFuture"/>
 			<cache:cacheable method="conditional"/>
 			<cache:cacheable method="unless"/>
 			<cache:cacheable method="null*"/>
